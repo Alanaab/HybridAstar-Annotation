@@ -7,6 +7,7 @@
 //                      HYBRID A* ALGORITHM
 //  AUTHOR:   Karl Kurzer
 //  WRITTEN:  2015-03-02
+//  Modify by Alanby
 //###################################################
 
 #include <cstring>
