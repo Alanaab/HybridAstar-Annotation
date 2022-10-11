@@ -1,3 +1,5 @@
+// 碰撞检测模块，给定一个节点，判断其是否和障碍物发生碰撞
+
 #ifndef COLLISIONDETECTION_H
 #define COLLISIONDETECTION_H
 

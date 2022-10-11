@@ -46,11 +46,11 @@ void Path::clear() {
 // __________
 // TRACE PATH
 void Path::updatePath(const std::vector<Node3D>& nodePath) {
-  path.header.stamp = ros::Time::now();
+  path.header.stamp = ros::Time::now();  // 路径头部时间戳
   int k = 0;
 
   for (size_t i = 0; i < nodePath.size(); ++i) {
-    addSegment(nodePath[i]);
+    addSegment(nodePath[i]);  
     addNode(nodePath[i], k);
     k++;
     addVehicle(nodePath[i], k);
@@ -61,6 +61,7 @@ void Path::updatePath(const std::vector<Node3D>& nodePath) {
 }
 // ___________
 // ADD SEGMENT
+// 往rviz发布路径线段，并不是样条曲线，只是简单的线段
 void Path::addSegment(const Node3D& node) {
   geometry_msgs::PoseStamped vertex;
   vertex.pose.position.x = node.getX() * Constants::cellSize;
@@ -75,6 +76,7 @@ void Path::addSegment(const Node3D& node) {
 
 // ________
 // ADD NODE
+// 往 RVIZ 发布路径节点
 void Path::addNode(const Node3D& node, int i) {
   visualization_msgs::Marker pathNode;
 
@@ -107,6 +109,7 @@ void Path::addNode(const Node3D& node, int i) {
   pathNodes.markers.push_back(pathNode);
 }
 
+// 往 RVIZ 发布车体框架扫过的面积
 void Path::addVehicle(const Node3D& node, int i) {
   visualization_msgs::Marker pathVehicle;
 

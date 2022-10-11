@@ -34,13 +34,13 @@ int main(int argc, char** argv) {
       tf::poseMsgToTF(grid->info.origin, tfPose);
     }
 
-    // odom to map
+    // odom to map  的齐次变换
     broadcaster.sendTransform(
       tf::StampedTransform(
         tf::Transform(tf::Quaternion(0, 0, 0, 1), tfPose.getOrigin()),
         ros::Time::now(), "odom", "map"));
 
-    // map to path
+    // map to path  的齐次变换
     broadcaster.sendTransform(
       tf::StampedTransform(
         tf::Transform(tf::Quaternion(0, 0, 0, 1), tf::Vector3(0, 0, 0)),

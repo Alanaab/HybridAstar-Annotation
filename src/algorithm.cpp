@@ -14,6 +14,7 @@ Node3D* dubinsShot(Node3D& start, const Node3D& goal, CollisionDetection& config
 /*!
    \brief A structure to sort nodes in a heap structure
 */
+// 比较结构体，这是定义最小堆的排序用的，用到了3D节点和2D节点的排序，代价最小的在最前面
 struct CompareNodes {
   /// Sorting 3D nodes by increasing C value - the total estimated cost
   bool operator()(const Node3D* lhs, const Node3D* rhs) const {
@@ -28,40 +29,41 @@ struct CompareNodes {
 //###################################################
 //                                        3D A*
 //###################################################
-Node3D* Algorithm::hybridAStar(Node3D& start,
-                               const Node3D& goal,
-                               Node3D* nodes3D,
-                               Node2D* nodes2D,
-                               int width,
-                               int height,
-                               CollisionDetection& configurationSpace,
-                               float* dubinsLookup,
-                               Visualize& visualization) {
+Node3D* Algorithm::hybridAStar(Node3D& start,  // 起点
+                               const Node3D& goal, // 终点
+                               Node3D* nodes3D,  // 三维节点
+                               Node2D* nodes2D,  // 二维节点
+                               int width,  // 栅格宽度
+                               int height,  // 栅格长度
+                               CollisionDetection& configurationSpace,  // 构型空间
+                               float* dubinsLookup,  // dubins曲线表
+                               Visualize& visualization) { // 可视化
 
   // PREDECESSOR AND SUCCESSOR INDEX
-  int iPred, iSucc;
+  // 定义当前节点的index和下一个节点的index
+  int iPred, iSucc; 
   float newG;
   // Number of possible directions, 3 for forward driving and an additional 3 for reversing
-  int dir = Constants::reverse ? 6 : 3;
+  int dir = Constants::reverse ? 6 : 3;  // 包含倒车的话，就是有6个方向，前后各三个
   // Number of iterations the algorithm has run for stopping based on Constants::iterations
-  int iterations = 0;
+  int iterations = 0; // 迭代次数
 
   // VISUALIZATION DELAY
   ros::Duration d(0.003);
 
   // OPEN LIST AS BOOST IMPLEMENTATION
-  typedef boost::heap::binomial_heap<Node3D*,
-          boost::heap::compare<CompareNodes>
-          > priorityQueue;
+  // 定义优先级队列 O
+  typedef boost::heap::binomial_heap< Node3D*, boost::heap::compare<CompareNodes>> priorityQueue;
   priorityQueue O;
 
   // update h value
+  // 更新启发代价，这里根据论文主要有两个代价
   updateH(start, goal, nodes2D, dubinsLookup, width, height, configurationSpace, visualization);
   // mark start as open
   start.open();
   // push on priority queue aka open list
   O.push(&start);
-  iPred = start.setIdx(width, height);
+  iPred = start.setIdx(width, height); // 这个index计算的时候考虑到了heading，三维的index
   nodes3D[iPred] = start;
 
   // NODE POINTER
@@ -71,64 +73,17 @@ Node3D* Algorithm::hybridAStar(Node3D& start,
   // float max = 0.f;
 
   // continue until O empty
+  // 队列非空，一直执行下去
   while (!O.empty()) {
 
-    //    // DEBUG
-    //    Node3D* pre = nullptr;
-    //    Node3D* succ = nullptr;
-
-    //    std::cout << "\t--->>>" << std::endl;
-
-    //    for (priorityQueue::ordered_iterator it = O.ordered_begin(); it != O.ordered_end(); ++it) {
-    //      succ = (*it);
-    //      std::cout << "VAL"
-    //                << " | C:" << succ->getC()
-    //                << " | x:" << succ->getX()
-    //                << " | y:" << succ->getY()
-    //                << " | t:" << helper::toDeg(succ->getT())
-    //                << " | i:" << succ->getIdx()
-    //                << " | O:" << succ->isOpen()
-    //                << " | pred:" << succ->getPred()
-    //                << std::endl;
-
-    //      if (pre != nullptr) {
-
-    //        if (pre->getC() > succ->getC()) {
-    //          std::cout << "PRE"
-    //                    << " | C:" << pre->getC()
-    //                    << " | x:" << pre->getX()
-    //                    << " | y:" << pre->getY()
-    //                    << " | t:" << helper::toDeg(pre->getT())
-    //                    << " | i:" << pre->getIdx()
-    //                    << " | O:" << pre->isOpen()
-    //                    << " | pred:" << pre->getPred()
-    //                    << std::endl;
-    //          std::cout << "SCC"
-    //                    << " | C:" << succ->getC()
-    //                    << " | x:" << succ->getX()
-    //                    << " | y:" << succ->getY()
-    //                    << " | t:" << helper::toDeg(succ->getT())
-    //                    << " | i:" << succ->getIdx()
-    //                    << " | O:" << succ->isOpen()
-    //                    << " | pred:" << succ->getPred()
-    //                    << std::endl;
-
-    //          if (pre->getC() - succ->getC() > max) {
-    //            max = pre->getC() - succ->getC();
-    //          }
-    //        }
-    //      }
-
-    //      pre = succ;
-    //    }
-
     // pop node with lowest cost from priority queue
-    nPred = O.top();
+    nPred = O.top(); // 弹出代价最小的节点
     // set index
-    iPred = nPred->setIdx(width, height);
-    iterations++;
+    iPred = nPred->setIdx(width, height);  // 计算当前节点的index
+    iterations++;  // 迭代次数增加
 
     // RViz visualization
+    // Rviz 显示过程
     if (Constants::visualization) {
       visualization.publishNode3DPoses(*nPred);
       visualization.publishNode3DPose(*nPred);
@@ -138,6 +93,7 @@ Node3D* Algorithm::hybridAStar(Node3D& start,
     // _____________________________
     // LAZY DELETION of rewired node
     // if there exists a pointer this node has already been expanded
+    // 如果当前节点是已经拓展过的，则退出，继续下一个节点
     if (nodes3D[iPred].isClosed()) {
       // pop node from the open list and start with a fresh node
       O.pop();
@@ -145,14 +101,16 @@ Node3D* Algorithm::hybridAStar(Node3D& start,
     }
     // _________________
     // EXPANSION OF NODE
+    // 如果没有拓展过，那么进行拓展
     else if (nodes3D[iPred].isOpen()) {
       // add node to closed list
-      nodes3D[iPred].close();
-      // remove node from open list
-      O.pop();
+      nodes3D[iPred].close();  // 先标记为拓展过
+      // remove node from open list 
+      O.pop(); // 节点弹出队列
 
       // _________
       // GOAL TEST
+      // 首先判断是否到达目标点或者迭代次数是否已经很大了
       if (*nPred == goal || iterations > Constants::iterations) {
         // DEBUG
         return nPred;
@@ -163,51 +121,60 @@ Node3D* Algorithm::hybridAStar(Node3D& start,
       else {
         // _______________________
         // SEARCH WITH DUBINS SHOT
+        // 如果没到目标点，首先来判断是否离目标点很近了，能不能将路径直接解析算出来 dubin shot
         if (Constants::dubinsShot && nPred->isInRange(goal) && nPred->getPrim() < 3) {
           nSucc = dubinsShot(*nPred, goal, configurationSpace);
 
           if (nSucc != nullptr && *nSucc == goal) {
             //DEBUG
             // std::cout << "max diff " << max << std::endl;
-            return nSucc;
+            return nSucc;  // 如果可以，那么直接返回最后一个节点
           }
         }
-
+     
         // ______________________________
         // SEARCH WITH FORWARD SIMULATION
+        // 还不能直接解析算出，则开始向各个可能的方向拓展节点
         for (int i = 0; i < dir; i++) {
           // create possible successor
+          // 计算邻节点，这个节点是人为设定的，可以自行根据机器人修改
           nSucc = nPred->createSuccessor(i);
           // set index of the successor
           iSucc = nSucc->setIdx(width, height);
 
           // ensure successor is on grid and traversable
+          // 确保该节点在规划的范围内，并且确保它不会碰到障碍物
           if (nSucc->isOnGrid(width, height) && configurationSpace.isTraversable(nSucc)) {
 
             // ensure successor is not on closed list or it has the same index as the predecessor
+            // 如果该节点没有被拓展过，或者和当前节点在同一个cell里面，继续执行，否则删除该节点，退出
             if (!nodes3D[iSucc].isClosed() || iPred == iSucc) {
 
               // calculate new G value
-              nSucc->updateG();
+              nSucc->updateG();  // 更新G值
               newG = nSucc->getG();
 
               // if successor not on open list or found a shorter way to the cell
+              // 如果该节点本身不在open集合，并且cost-to-far比目前的小，或者和当前节点在同一个cell里面时继续执行
               if (!nodes3D[iSucc].isOpen() || newG < nodes3D[iSucc].getG() || iPred == iSucc) {
 
                 // calculate H value
+                // 更新该节点的 启发式代价
                 updateH(*nSucc, goal, nodes2D, dubinsLookup, width, height, configurationSpace, visualization);
 
                 // if the successor is in the same cell but the C value is larger
+                // 如果和当前节点在同一个cell里面，并且总代价C 比较大，忽略
                 if (iPred == iSucc && nSucc->getC() > nPred->getC() + Constants::tieBreaker) {
                   delete nSucc;
                   continue;
                 }
                 // if successor is in the same cell and the C value is lower, set predecessor to predecessor of predecessor
+                // 如果和当前节点在同一个cell里面，并且总代价C 比较小，则采纳，并把当前节点的父亲，设为该节点的父亲
                 else if (iPred == iSucc && nSucc->getC() <= nPred->getC() + Constants::tieBreaker) {
                   nSucc->setPred(nPred->getPred());
                 }
 
-                if (nSucc->getPred() == nSucc) {
+                if (nSucc->getPred() == nSucc) {  // 循环？？？ 怎么会发生这个情况呢？
                   std::cout << "looping";
                 }
 
@@ -230,6 +197,7 @@ Node3D* Algorithm::hybridAStar(Node3D& start,
 
   return nullptr;
 }
+
 
 //###################################################
 //                                        2D A*
@@ -348,6 +316,8 @@ float aStar(Node2D& start,
 //###################################################
 //                                         COST TO GO
 //###################################################
+// 代价1：Non-holonomic-without-obstacles ： 就是利用dubins曲线或者是reedsShepp曲线计算当前点到目标点的距离代价，不考虑障碍物
+// 代价2：Holonomic-with-obstacles：其实就是考虑障碍物的代价，就是astar里的G值（cost——to——far）。 
 void updateH(Node3D& start, const Node3D& goal, Node2D* nodes2D, float* dubinsLookup, int width, int height, CollisionDetection& configurationSpace, Visualize& visualization) {
   float dubinsCost = 0;
   float reedsSheppCost = 0;
@@ -404,18 +374,18 @@ void updateH(Node3D& start, const Node3D& goal, Node2D* nodes2D, float* dubinsLo
     //      dubins_init(q0, q1, Constants::r, &dubinsPath);
     //      dubinsCost = dubins_path_length(&dubinsPath);
 
-    ompl::base::DubinsStateSpace dubinsPath(Constants::r);
+    ompl::base::DubinsStateSpace dubinsPath(Constants::r);  
     State* dbStart = (State*)dubinsPath.allocState();
     State* dbEnd = (State*)dubinsPath.allocState();
     dbStart->setXY(start.getX(), start.getY());
     dbStart->setYaw(start.getT());
     dbEnd->setXY(goal.getX(), goal.getY());
     dbEnd->setYaw(goal.getT());
-    dubinsCost = dubinsPath.distance(dbStart, dbEnd);
+    dubinsCost = dubinsPath.distance(dbStart, dbEnd); // 计算两个位姿之间的 dubin曲线距离
   }
 
   // if reversing is active use a
-  if (Constants::reverse && !Constants::dubins) {
+  if (Constants::reverse && !Constants::dubins) {  
     //    ros::Time t0 = ros::Time::now();
     ompl::base::ReedsSheppStateSpace reedsSheppPath(Constants::r);
     State* rsStart = (State*)reedsSheppPath.allocState();
@@ -424,7 +394,7 @@ void updateH(Node3D& start, const Node3D& goal, Node2D* nodes2D, float* dubinsLo
     rsStart->setYaw(start.getT());
     rsEnd->setXY(goal.getX(), goal.getY());
     rsEnd->setYaw(goal.getT());
-    reedsSheppCost = reedsSheppPath.distance(rsStart, rsEnd);
+    reedsSheppCost = reedsSheppPath.distance(rsStart, rsEnd);  // 计算两个位姿之间的 reedsShepp曲线距离
     //    ros::Time t1 = ros::Time::now();
     //    ros::Duration d(t1 - t0);
     //    std::cout << "calculated Reed-Sheep Heuristic in ms: " << d * 1000 << std::endl;
@@ -447,6 +417,7 @@ void updateH(Node3D& start, const Node3D& goal, Node2D* nodes2D, float* dubinsLo
 
   if (Constants::twoD) {
     // offset for same node in cell
+    // 这个twoDoffset没看懂，start.getX() - (long)start.getX()感觉是0把，em23333
     twoDoffset = sqrt(((start.getX() - (long)start.getX()) - (goal.getX() - (long)goal.getX())) * ((start.getX() - (long)start.getX()) - (goal.getX() - (long)goal.getX())) +
                       ((start.getY() - (long)start.getY()) - (goal.getY() - (long)goal.getY())) * ((start.getY() - (long)start.getY()) - (goal.getY() - (long)goal.getY())));
     twoDCost = nodes2D[(int)start.getY() * width + (int)start.getX()].getG() - twoDoffset;
@@ -454,12 +425,14 @@ void updateH(Node3D& start, const Node3D& goal, Node2D* nodes2D, float* dubinsLo
   }
 
   // return the maximum of the heuristics, making the heuristic admissable
+  // reedsSheppCost 和 dubinsCost是冲突的，两个选一个，然后考虑障碍物的twoDCost 和 不考虑障碍物的（dubinsCost或reedsSheppCost） 选一个大的
   start.setH(std::max(reedsSheppCost, std::max(dubinsCost, twoDCost)));
 }
 
 //###################################################
 //                                        DUBINS SHOT
 //###################################################
+// 直接用dubin曲线把当前点和终点连接起来，并判断如果没有碰到障碍物，则成功
 Node3D* dubinsShot(Node3D& start, const Node3D& goal, CollisionDetection& configurationSpace) {
   // start
   double q0[] = { start.getX(), start.getY(), start.getT() };
@@ -502,7 +475,7 @@ Node3D* dubinsShot(Node3D& start, const Node3D& goal, CollisionDetection& config
     } else {
       //      std::cout << "Dubins shot collided, discarding the path" << "\n";
       // delete all nodes
-      delete [] dubinsNodes;
+      delete [] dubinsNodes;  
       return nullptr;
     }
   }

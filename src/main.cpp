@@ -57,9 +57,12 @@ int main(int argc, char** argv) {
 
   ros::init(argc, argv, "a_star");
 
-  HybridAStar::Planner hy;
-  hy.plan(); 
+  HybridAStar::Planner hy;  // 创建planner对象，会调用planner的构造函数
+  hy.plan();   // 这一行多余，要不要也没关系
 
   ros::spin();
   return 0;
 }
+
+// 整体代码运行逻辑为：
+// main ——> planner的构造函数 ——> 等待图像、起始点和目标点 三个信息都接收到后 ——> 进入 plan 函数正式规划

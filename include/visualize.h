@@ -20,6 +20,7 @@ class Node2D;
   Depending on the settings in constants.h the visualization will send different amounts of detail.
   It can show the 3D search as well as the underlying 2D search used for the holonomic with obstacles heuristic.
 */
+// 该文件是用来可视化搜索过程的信息的
 class Visualize {
  public:
   // ___________

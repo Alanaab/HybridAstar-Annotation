@@ -36,9 +36,9 @@ class Path {
 
     // _________________
     // TOPICS TO PUBLISH
-    pubPath = n.advertise<nav_msgs::Path>(pathTopic, 1);
-    pubPathNodes = n.advertise<visualization_msgs::MarkerArray>(pathNodesTopic, 1);
-    pubPathVehicles = n.advertise<visualization_msgs::MarkerArray>(pathVehicleTopic, 1);
+    pubPath = n.advertise<nav_msgs::Path>(pathTopic, 1);  \\ 用于发布路径
+    pubPathNodes = n.advertise<visualization_msgs::MarkerArray>(pathNodesTopic, 1);  \\ 用于发布节点
+    pubPathVehicles = n.advertise<visualization_msgs::MarkerArray>(pathVehicleTopic, 1);  \\ 用于发布车体框
 
     // CONFIGURE THE CONTAINER
     path.header.frame_id = "path";

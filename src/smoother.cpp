@@ -3,6 +3,7 @@ using namespace HybridAStar;
 //###################################################
 //                                     CUSP DETECTION
 //###################################################
+// 尖点检测，应该就是检测不可导的点？因为超过3就是后退了，后退再往前就是不可导的点把
 inline bool isCusp(const std::vector<Node3D>& path, int i) {
   bool revim2 = path[i - 2].getPrim() > 3 ;
   bool revim1 = path[i - 1].getPrim() > 3 ;
@@ -15,6 +16,7 @@ inline bool isCusp(const std::vector<Node3D>& path, int i) {
 //###################################################
 //                                SMOOTHING ALGORITHM
 //###################################################
+// 平滑路径 ，输入 voronoi 图
 void Smoother::smoothPath(DynamicVoronoi& voronoi) {
   // load the current voronoi diagram into the smoother
   this->voronoi = voronoi;
@@ -34,11 +36,11 @@ void Smoother::smoothPath(DynamicVoronoi& voronoi) {
   // descent along the gradient untill the maximum number of iterations has been reached
   float totalWeight = wSmoothness + wCurvature + wVoronoi + wObstacle;
 
-  while (iterations < maxIterations) {
-
+  while (iterations < maxIterations) {  // 梯度下降的迭代次数
+     
     // choose the first three nodes of the path
     for (int i = 2; i < pathLength - 2; ++i) {
-
+      // 考虑五个点的平滑
       Vector2D xim2(newPath[i - 2].getX(), newPath[i - 2].getY());
       Vector2D xim1(newPath[i - 1].getX(), newPath[i - 1].getY());
       Vector2D xi(newPath[i].getX(), newPath[i].getY());
@@ -49,28 +51,28 @@ void Smoother::smoothPath(DynamicVoronoi& voronoi) {
 
       // the following points shall not be smoothed
       // keep these points fixed if they are a cusp point or adjacent to one
-      if (isCusp(newPath, i)) { continue; }
+      if (isCusp(newPath, i)) { continue; }  // 检测是否有尖点（不可导的点），有则跳过
 
-      correction = correction - obstacleTerm(xi);
+      correction = correction - obstacleTerm(xi);  // 对当前点xi计算障碍物惩罚项的梯度
       if (!isOnGrid(xi + correction)) { continue; }
 
       //todo not implemented yet
       // voronoiTerm(); 
 
       // ensure that it is on the grid
-      correction = correction - smoothnessTerm(xim2, xim1, xi, xip1, xip2);
+      correction = correction - smoothnessTerm(xim2, xim1, xi, xip1, xip2); // 对当前点xi计算平滑惩罚项的梯度
       if (!isOnGrid(xi + correction)) { continue; }
 
       // ensure that it is on the grid
-      correction = correction - curvatureTerm(xim1, xi, xip1);
+      correction = correction - curvatureTerm(xim1, xi, xip1); // 对当前点xi计算曲率惩罚项的梯度
       if (!isOnGrid(xi + correction)) { continue; }
 
       // ensure that it is on the grid
 
-      xi = xi + alpha * correction/totalWeight;
-      newPath[i].setX(xi.getX());
-      newPath[i].setY(xi.getY());
-      Vector2D Dxi = xi - xim1;
+      xi = xi + alpha * correction/totalWeight;  // 梯度下降
+      newPath[i].setX(xi.getX()); // 计算新的X
+      newPath[i].setY(xi.getY()); // 计算新的Y
+      Vector2D Dxi = xi - xim1; // 计算前一个点和当前点的差，为了让前一个点的角度指向当前点
       newPath[i - 1].setT(std::atan2(Dxi.getY(), Dxi.getX()));
 
     }
@@ -78,9 +80,10 @@ void Smoother::smoothPath(DynamicVoronoi& voronoi) {
     iterations++;
   }
 
-  path = newPath;
+  path = newPath; // 平滑后的新的路径
 }
 
+// 回溯路径
 void Smoother::tracePath(const Node3D* node, int i, std::vector<Node3D> path) {
   if (node == nullptr) {
     this->path = path;
@@ -95,15 +98,18 @@ void Smoother::tracePath(const Node3D* node, int i, std::vector<Node3D> path) {
 //###################################################
 //                                      OBSTACLE TERM
 //###################################################
+// 返回离最近障碍的梯度方向
 Vector2D Smoother::obstacleTerm(Vector2D xi) {
   Vector2D gradient;
   // the distance to the closest obstacle from the current node
+  // 计算当前点离障碍物最近的距离
   float obsDst = voronoi.getDistance(xi.getX(), xi.getY());
   // the vector determining where the obstacle is
   int x = (int)xi.getX();
   int y = (int)xi.getY();
   // if the node is within the map
   if (x < width && x >= 0 && y < height && y >= 0) {
+    //从当前点xi到最近障碍物的向量
     Vector2D obsVct(xi.getX() - voronoi.data[(int)xi.getX()][(int)xi.getY()].obstX,
                     xi.getY() - voronoi.data[(int)xi.getX()][(int)xi.getY()].obstY);
 
@@ -221,6 +227,7 @@ Vector2D Smoother::curvatureTerm(Vector2D xim1, Vector2D xi, Vector2D xip1) {
 //###################################################
 //                                    SMOOTHNESS TERM
 //###################################################
+// 平滑项的梯度
 Vector2D Smoother::smoothnessTerm(Vector2D xim2, Vector2D xim1, Vector2D xi, Vector2D xip1, Vector2D xip2) {
   return wSmoothness * (xim2 - 4 * xim1 + 6 * xi - 4 * xip1 + xip2);
 }

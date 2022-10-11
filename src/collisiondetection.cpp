@@ -26,7 +26,7 @@ bool CollisionDetection::configurationTest(float x, float y, float t) const {
     // make sure the configuration coordinates are actually on the grid
     if (cX >= 0 && (unsigned int)cX < grid->info.width && cY >= 0 && (unsigned int)cY < grid->info.height) {
       if (grid->data[cY * grid->info.width + cX]) {
-        return false;
+        return false; //若grid的某个小网格存在值，说明有障碍，则返回false表示不在自由网格
       }
     }
   }

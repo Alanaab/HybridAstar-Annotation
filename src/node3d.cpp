@@ -63,7 +63,7 @@ Node3D* Node3D::createSuccessor(const int i) {
     tSucc = Helper::normalizeHeadingRad(t - dt[i - 3]);
   }
 
-  return new Node3D(xSucc, ySucc, tSucc, g, 0, this, i);
+  return new Node3D(xSucc, ySucc, tSucc, g, 0, this, i); // 注意这里的新节点是new出来的，需要考虑删除
 }
 
 
@@ -74,24 +74,27 @@ void Node3D::updateG() {
   // forward driving
   if (prim < 3) {
     // penalize turning
-    if (pred->prim != prim) {
+    if (pred->prim != prim) { // 判断是否有转向的惩罚
       // penalize change of direction
-      if (pred->prim > 2) {
-        g += dx[0] * Constants::penaltyTurning * Constants::penaltyCOD;
-      } else {
-        g += dx[0] * Constants::penaltyTurning;
+      if (pred->prim > 2) { // 改变前后方向的惩罚
+        g += dx[0] * Constants::penaltyTurning * Constants::penaltyCOD; 
+      } 
+      else {
+        g += dx[0] * Constants::penaltyTurning;  //
       }
-    } else {
+    } 
+    else {
       g += dx[0];
     }
   }
   // reverse driving
+  // 后退情况下，和前面一样
   else {
     // penalize turning and reversing
     if (pred->prim != prim) {
       // penalize change of direction
       if (pred->prim < 3) {
-        g += dx[0] * Constants::penaltyTurning * Constants::penaltyReversing * Constants::penaltyCOD;
+        g += dx[0] * Constants::penaltyTurning * Constants::penaltyReversing * Constants::penaltyCOD;  // 
       } else {
         g += dx[0] * Constants::penaltyTurning * Constants::penaltyReversing;
       }
